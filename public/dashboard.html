@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Membership Engine</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Dashboard specific styles */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .sidebar {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            position: sticky;
+            top: 100px;
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .user-profile {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-profile h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .user-profile p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .subscription-info {
+            background: rgba(79, 70, 229, 0.1);
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .subscription-info h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .subscription-info .plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .subscription-info .expiry {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-menu a {
+            display: block;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        /* Content Area */
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Content Cards */
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .content-card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .content-card .thumb {
+            height: 160px;
+            background: linear-gradient(45deg, #1e293b, #334155);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            position: relative;
+        }
+
+        .content-card .body {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-card h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .content-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        /* Locked State */
+        .content-card.locked {
+            opacity: 0.7;
+        }
+
+        .content-card.locked .thumb {
+            filter: blur(4px) grayscale(100%);
+        }
+
+        .content-card.locked .lock-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 2;
+        }
+
+        .lock-overlay span {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            filter: none;
+        }
+
+        .lock-overlay .upgrade-badge {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Upgrade Plans Horizontal Grid */
+        .upgrade-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="logo">Membership<span class="highlight">Engine</span></a>
+        <div class="nav-links">
+            <button class="btn btn-outline" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="user-profile">
+                <h3 id="userName">User Name</h3>
+                <p id="userEmail">user@example.com</p>
+                <!-- Admin indicator if needed later -->
+                <span id="adminBadge" class="tier-badge hidden"
+                    style="background:var(--secondary);color:white;margin-top:0.5rem;">Admin</span>
+            </div>
+
+            <div class="subscription-info" id="subInfo">
+                <h4>Current Plan</h4>
+                <div class="plan-name" id="activePlanName">No Active Plan</div>
+                <div class="expiry" id="activePlanExpiry">
+                    Status: <strong>Inactive</strong><br>
+                    You currently do not have a paid subscription.
+                </div>
+                <button class="btn btn-primary btn-sm mt-3" style="width: 100%; margin-top: 1rem;"
+                    onclick="switchTab('upgrade')">Upgrade Now</button>
+            </div>
+
+            <ul class="nav-menu">
+                <li><a href="#" class="active" onclick="switchTab('content')" id="nav-content">📚 My Content</a></li>
+                <li><a href="#" onclick="switchTab('upgrade')" id="nav-upgrade">💎 Upgrade Plan</a></li>
+                <!-- <li><a href="#" onclick="switchTab('settings')" id="nav-settings">⚙️ Settings</a></li> -->
+            </ul>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Content Tab -->
+            <div id="tab-content" class="tab-content active">
+                <div class="content-header">
+                    <h2>Premium library</h2>
+                    <p class="text-muted">Courses, videos, and masterclasses</p>
+                </div>
+
+                <div id="contentAlert" class="alert"></div>
+
+                <div class="content-grid" id="contentGrid">
+                    <!-- Dynamic content cards -->
+                    <p>Loading content...</p>
+                </div>
+            </div>
+
+            <!-- Upgrade Tab -->
+            <div id="tab-upgrade" class="tab-content">
+                <div class="content-header">
+                    <h2>Upgrade Your Access</h2>
+                    <p class="text-muted">Choose a plan to instantly unlock more content.</p>
+                </div>
+
+                <div id="upgradeAlert" class="alert"></div>
+
+                <div class="upgrade-grid" id="upgradeGrid">
+                    <!-- Dynamic plan cards -->
+                    <p>Loading plans...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>

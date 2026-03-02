@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Engine | The Next-Gen Platform</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Membership<span class="highlight">Engine</span></div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="register.html" class="btn btn-primary" id="loginBtn">Login / Register</a>
+            <a href="dashboard.html" class="btn btn-secondary hidden" id="dashBtn">Dashboard</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <h1>Unlock Premium Content with <span class="highlight">Ease</span></h1>
+            <p>A simple, powerful, and tiered membership engine to skyrocket your community revenue and protect your assets.</p>
+            <a href="register.html" class="btn btn-large btn-primary">Start Your Free Trial</a>
+        </div>
+    </header>
+
+    <section id="features" class="features-section">
+        <div class="container">
+            <h2>Why Choose Membership Engine?</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="icon">🔒</div>
+                    <h3>Tiered Access</h3>
+                    <p>Restrict different levels of content dynamically based on the user's active plan tier.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">⏱️</div>
+                    <h3>Auto Expiration</h3>
+                    <p>Subscriptions automatically expire, requiring users to renew their access for continued benefits.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">💻</div>
+                    <h3>Modern Tech</h3>
+                    <p>Built on Express, Vanilla JS, and MySQL for blindingly fast performance and low overhead.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="pricing-section">
+        <div class="container">
+            <h2>Simple, Transparent Pricing</h2>
+            <p class="subtitle">Join today and gain instant access to our exclusive materials.</p>
+            
+            <div class="pricing-grid" id="pricingGrid">
+                <!-- Pricing Plans Injected via JS -->
+                 <p>Loading plans...</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 Membership Engine. All rights reserved.</p>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check auth state for nav buttons
+            const res = await apiFetch('/api/auth/me');
+            if (res && res.user) {
+                document.getElementById('loginBtn').classList.add('hidden');
+                document.getElementById('dashBtn').classList.remove('hidden');
+            }
+
+            // Load and display plans
+            const plans = await apiFetch('/api/plans');
+            const grid = document.getElementById('pricingGrid');
+            if (plans && plans.length > 0) {
+                grid.innerHTML = plans.map(p => `
+                    <div class="pricing-card ${p.tier_level === 2 ? 'popular' : ''}">
+                        ${p.tier_level === 2 ? '<div class="badge">Most Popular</div>' : ''}
+                        <h3>${p.name}</h3>
+                        <div class="price"><span>$</span>${(p.price).toFixed(2)}<span class="duration">/${p.duration_days} days</span></div>
+                        <p>${p.description}</p>
+                        <a href="register.html" class="btn btn-outline">Choose ${p.name}</a>
+                    </div>
+                `).join('');
+            } else {
+                grid.innerHTML = `<p>No plans available right now.</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
