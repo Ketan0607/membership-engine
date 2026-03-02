@@ -66,4 +66,23 @@ router.get("/my", requireAuth, async (req, res) => {
     }
 });
 
+// Get user's subscription HISTORY (all)
+router.get("/history", requireAuth, async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const [rows] = await pool.query(`
+            SELECT s.*, p.name, p.tier_level, p.price
+            FROM subscriptions s
+            JOIN plans p ON s.plan_id = p.id
+            WHERE s.user_id = ?
+            ORDER BY s.start_date DESC
+        `, [userId]);
+
+        res.json(rows);
+    } catch (error) {
+        console.error("History Error:", error);
+        res.status(500).json({ message: "Failed to load history" });
+    }
+});
+
 export default router;

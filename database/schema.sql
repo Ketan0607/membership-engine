@@ -40,7 +40,7 @@ CREATE TABLE protected_content (
 -- Default Admin (password: Admin@123)
 INSERT INTO users (full_name,email,password,role)
 VALUES ('Super Admin','admin@site.com',
-'$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi','admin');
+'$2a$10$H.h3505RZWE8NtbGSIU4U.y00VfGIFHHmAsL0nzOvI7uxXhYeGsx.','admin');
 
 -- Sample Plans
 INSERT INTO plans (name,price,duration_days,tier_level,description) VALUES

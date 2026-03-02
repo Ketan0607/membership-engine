@@ -65,7 +65,13 @@ router.post("/login", async (req, res) => {
             role: user.role
         };
 
-        res.json({ success: true, message: "Logged in successfully", user: req.session.user });
+        req.session.save((err) => {
+            if (err) {
+                console.error("Session save error:", err);
+                return res.status(500).json({ message: "Session save failed" });
+            }
+            res.json({ success: true, message: "Logged in successfully", user: req.session.user });
+        });
     } catch (error) {
         console.error("Login Error:", error);
         res.status(500).json({ message: "Server error during login" });
@@ -89,6 +95,29 @@ router.get("/me", (req, res) => {
         res.json({ user: req.session.user });
     } else {
         res.json({ user: null });
+    }
+});
+
+// Update Profile
+import { requireAuth } from "../middleware/authMiddleware.js";
+router.put("/profile", requireAuth, async (req, res) => {
+    try {
+        const { fullName } = req.body;
+        const userId = req.session.user.id;
+
+        if (!fullName) {
+            return res.status(400).json({ message: "Full name is required" });
+        }
+
+        await pool.query("UPDATE users SET full_name = ? WHERE id = ?", [fullName, userId]);
+
+        // Update session
+        req.session.user.fullName = fullName;
+
+        res.json({ success: true, message: "Profile updated successfully", user: req.session.user });
+    } catch (error) {
+        console.error("Profile Update Error:", error);
+        res.status(500).json({ message: "Failed to update profile" });
     }
 });
 

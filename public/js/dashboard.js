@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Elements
     const userNameEl = document.getElementById('userName');
     const userEmailEl = document.getElementById('userEmail');
+    const userAvatarEl = document.getElementById('userAvatar');
     const adminBadge = document.getElementById('adminBadge');
 
     const activePlanName = document.getElementById('activePlanName');
@@ -10,9 +11,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const contentGrid = document.getElementById('contentGrid');
     const upgradeGrid = document.getElementById('upgradeGrid');
+    const historyTableBody = document.getElementById('historyTableBody');
 
     const contentAlert = document.getElementById('contentAlert');
     const upgradeAlert = document.getElementById('upgradeAlert');
+    const historyAlert = document.getElementById('historyAlert');
+    const settingsAlert = document.getElementById('settingsAlert');
+
+    const settingsForm = document.getElementById('settingsForm');
+    const settingsFullName = document.getElementById('settingsFullName');
+    const settingsEmail = document.getElementById('settingsEmail');
 
     const logoutBtn = document.getElementById('logoutBtn');
 
@@ -25,17 +33,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         user = authData.user;
-        userNameEl.textContent = user.fullName;
-        userEmailEl.textContent = user.email;
-
-        if (user.role === 'admin') {
-            adminBadge.classList.remove('hidden');
-        }
+        updateUserUI(user);
 
     } catch (error) {
         console.error("Auth check failed:", error);
         window.location.href = 'register.html';
         return;
+    }
+
+    function updateUserUI(userData) {
+        userNameEl.textContent = userData.fullName;
+        userEmailEl.textContent = userData.email;
+        userAvatarEl.textContent = userData.fullName.charAt(0).toUpperCase();
+
+        settingsFullName.value = userData.fullName;
+        settingsEmail.value = userData.email;
+
+        if (userData.role === 'admin') {
+            adminBadge.classList.remove('hidden');
+        }
     }
 
     // 2. Load Subscription
@@ -45,10 +61,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (sub && sub.status === 'active') {
                 activePlanName.textContent = sub.name;
                 activePlanExpiry.innerHTML = `
-                    Status: <strong style="color:var(--secondary)">Active</strong><br>
-                    Tier Level: <strong>${sub.tier_level}</strong><hr style="border-color:var(--border);margin:8px 0;">
-                    Started: <strong>${formatDate(sub.start_date)}</strong><br>
-                    Ends on:  <strong>${formatDate(sub.end_date)}</strong>
+                    <div style="margin-top:0.5rem; font-size:0.9rem;">
+                        Status: <strong style="color:var(--secondary)">Active</strong><br>
+                        Tier Level: <strong>${sub.tier_level}</strong><hr style="border-color:var(--border);margin:12px 0;opacity:0.3;">
+                        Started: <strong>${formatDate(sub.start_date)}</strong><br>
+                        Ends on:  <strong>${formatDate(sub.end_date)}</strong>
+                    </div>
                 `;
             } else {
                 activePlanName.textContent = "Free / Inactive";
@@ -111,14 +129,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // We could compare with the current plan level to only show UPGRADES, 
-            // but for simplicity, we show all plans and let them switch/renew.
             upgradeGrid.innerHTML = plans.map(p => `
-                <div class="pricing-card" style="padding: 2rem;">
+                <div class="pricing-card">
                     <h3>${p.name} <span class="tier-badge" style="float:right;">Tier ${p.tier_level}</span></h3>
                     <div class="price"><span>$</span>${p.price}<span class="duration">/${p.duration_days}d</span></div>
-                    <p style="font-size:0.9rem">${p.description}</p>
-                    <button class="btn btn-primary" onclick="subscribeToPlan(${p.id})">Subscribe & Unlock</button>
+                    <p>${p.description}</p>
+                    <button class="btn btn-primary" onclick="subscribeToPlan(${p.id})">Subscribe Now</button>
                 </div>
             `).join('');
 
@@ -129,11 +145,68 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // 5. Load History
+    async function loadHistory() {
+        try {
+            const history = await apiFetch('/api/subscriptions/history');
+            if (!history || history.length === 0) {
+                historyTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 2rem; color: var(--text-muted);">No subscription history found.</td></tr>`;
+                return;
+            }
+
+            historyTableBody.innerHTML = history.map(h => `
+                <tr style="border-bottom: 1px solid var(--border); opacity: ${h.status !== 'active' ? '0.7' : '1'}">
+                    <td style="padding: 1rem 0;">
+                        <strong>${h.name}</strong><br>
+                        <small class="text-muted">Tier ${h.tier_level}</small>
+                    </td>
+                    <td style="padding: 1rem 0;">$${h.price}</td>
+                    <td style="padding: 1rem 0;">${formatDate(h.start_date)}</td>
+                    <td style="padding: 1rem 0;">
+                        <span class="tier-badge" style="background: ${h.status === 'active' ? 'var(--secondary)' : 'rgba(255,255,255,0.1)'}; color: white;">
+                            ${h.status.toUpperCase()}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error("Error loading history", error);
+            historyAlert.className = 'alert error';
+            historyAlert.textContent = "Failed to load billing history.";
+        }
+    }
+
+    // 6. Settings Form
+    settingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            settingsAlert.className = 'alert';
+            settingsAlert.textContent = '';
+
+            const res = await apiFetch('/api/auth/profile', {
+                method: 'PUT',
+                body: JSON.stringify({ fullName: settingsFullName.value })
+            });
+
+            settingsAlert.className = 'alert success';
+            settingsAlert.textContent = res.message;
+
+            // Update UI
+            user.fullName = settingsFullName.value;
+            updateUserUI(user);
+
+        } catch (error) {
+            settingsAlert.className = 'alert error';
+            settingsAlert.textContent = error.message;
+        }
+    });
+
     // Run Initialization
     await Promise.all([
         loadSubscription(),
         loadContent(),
-        loadPlans()
+        loadPlans(),
+        loadHistory()
     ]);
 
     // Handle Logout
@@ -148,7 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Make functions globally available for inline onclicks
     window.subscribeToPlan = async function (planId) {
-        if (!confirm("Are you sure you want to purchase this plan? (Simulated)")) return;
+        if (!confirm("Confirm purchase? This will simulate a payment process.")) return;
 
         try {
             upgradeAlert.className = 'alert';
@@ -161,14 +234,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             upgradeAlert.className = 'alert success';
             upgradeAlert.textContent = res.message;
 
-            // Re-fetch everything to update UI immediately
-            await loadSubscription();
-            await loadContent();
+            // Re-fetch everything
+            await Promise.all([
+                loadSubscription(),
+                loadContent(),
+                loadHistory()
+            ]);
 
-            // Switch back to content tab gently after 2s
             setTimeout(() => {
                 switchTab('content');
-                upgradeAlert.className = 'alert'; // hide
+                upgradeAlert.className = 'alert';
             }, 2000);
 
         } catch (error) {
@@ -177,22 +252,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // Global Tab Switch Function
+    window.switchTab = function (tabName) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-menu a').forEach(el => el.classList.remove('active'));
+
+        const targetTab = document.getElementById(`tab-${tabName}`);
+        const navLink = document.getElementById(`nav-${tabName}`);
+
+        if (targetTab) targetTab.classList.add('active');
+        if (navLink) navLink.classList.add('active');
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
 });
-
-// Global Tab Switch Function
-window.switchTab = function (tabName) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    // Un-highlight all nav links
-    document.querySelectorAll('.nav-menu a').forEach(el => el.classList.remove('active'));
-
-    // Show selected
-    const targetTab = document.getElementById(`tab-${tabName}`);
-    const navLink = document.getElementById(`nav-${tabName}`);
-
-    if (targetTab) targetTab.classList.add('active');
-    if (navLink) navLink.classList.add('active');
-
-    // Scroll top in mobile views
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-};

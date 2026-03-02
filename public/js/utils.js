@@ -11,14 +11,23 @@ async function apiFetch(url, options = {}) {
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'An error occurred with the request');
+            if (!response.ok) {
+                // Legitimate error from server (like 401) - don't hit mock!
+                const err = new Error(data.message || 'Request failed');
+                err.status = response.status;
+                throw err;
+            }
             return data;
         } else {
-            // Throw to trigger the local offline mock fallback below
-            throw new Error('Offline Mode');
+            // Not JSON - might be a 404 or backend issue
+            throw new Error('Invalid response format');
         }
     } catch (error) {
-        console.warn("Backend offline. Using Local Demo Sandbox Mode for:", url);
+        // Only use mock if it's a network error OR we explicitly want sandbox
+        if (error.status === 401 || error.status === 400 || error.status === 403) {
+            throw error; // Rethrow auth/validation errors
+        }
+        console.warn("Backend connectivity issue. Using Local Demo Sandbox Mode for:", url);
         return mockOfflineAPI(url, options);
     }
 }
@@ -117,6 +126,25 @@ function mockOfflineAPI(url, options) {
                     ...c,
                     hasAccess: userTier >= c.required_tier
                 })));
+            }
+            else if (url.includes('/api/auth/profile')) {
+                // Mock Profile Update
+                const { fullName } = JSON.parse(options.body);
+                const userStr = localStorage.getItem('mock_user');
+                let userObj = userStr ? JSON.parse(userStr) : { id: 1, email: "demo@site.com", role: "member" };
+                userObj.fullName = fullName;
+                localStorage.setItem('mock_user', JSON.stringify(userObj));
+                resolve({ success: true, message: "Profile updated successfully", user: userObj });
+            }
+            else if (url.includes('/api/subscriptions/history')) {
+                // Mock History
+                const subStr = localStorage.getItem('mock_sub');
+                if (subStr) {
+                    const sub = JSON.parse(subStr);
+                    resolve([{ ...sub, price: sub.tier_level === 3 ? 19.99 : (sub.tier_level === 2 ? 9.99 : 4.99) }]);
+                } else {
+                    resolve([]);
+                }
             }
             else {
                 reject(new Error("Unknown Mock Route"));
